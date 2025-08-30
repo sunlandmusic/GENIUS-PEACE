@@ -2074,6 +2074,8 @@ PLAY / STOP
             this.chordGain = 0.3;
             this.filterNode = null;
             this.masterGain = null;
+            this.maxUserVoices = 12;
+            this.maxSequencerVoices = 12;
         }
 
         initialize() {
@@ -2094,8 +2096,24 @@ PLAY / STOP
             this.filterNode.gain.setValueAtTime(gainReduction, this.audioContext.currentTime);
         }
 
+        stopVoice(voice) {
+            if (!voice || voice.stopped) return;
+            voice.stopped = true;
+            voice.gain.gain.cancelScheduledValues(this.audioContext.currentTime);
+            voice.gain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.08);
+            voice.osc.stop(this.audioContext.currentTime + 0.08);
+            this.activeVoices.delete(voice);
+        }
+
         startOsc(freq, isBass, velocityGain = 1, source = 'user') {
             if (!this.audioContext) return null;
+
+            const maxVoices = source === 'user' ? this.maxUserVoices : this.maxSequencerVoices;
+            const currentVoices = Array.from(this.activeVoices).filter(v => v.source === source);
+            if (currentVoices.length >= maxVoices) {
+                this.stopVoice(currentVoices[0]); // Stop the oldest voice
+            }
+
             const osc = this.audioContext.createOscillator();
             const gain = this.audioContext.createGain();
             osc.connect(gain);
@@ -2656,9 +2674,31 @@ PLAY / STOP
         }
         APP.updatePianoKeys();
     };
+    let lastPlusMinusCall = 0;
+    const debounceTime = 50; // ms
+
     APP.handlePlus = function() {
+        const now = Date.now();
+        if (now - lastPlusMinusCall < debounceTime) return;
+        lastPlusMinusCall = now;
+
         const control = APP.state.selectedControl;
-        if (!control) return;
+        if (!control) {
+            if (APP.state.lastActiveSlot) {
+                const [note, slotIndexStr] = APP.state.lastActiveSlot.split('-');
+                const slotIndex = parseInt(slotIndexStr, 10);
+                const availableChords = APP.MusicEngine.getAvailableChords(note, APP.state.mode, APP.state.selectedKey);
+                if (availableChords.length > 0) {
+                    const slotKey = `${note}-${slotIndex}`;
+                    const currentChordIndex = APP.state.slotChordIndices[slotKey] || 0;
+                    const nextChordIndex = (currentChordIndex + 1) % availableChords.length;
+                    APP.state.slotChordIndices[slotKey] = nextChordIndex;
+                    APP.updatePianoKeys();
+                }
+            }
+            return;
+        }
+
         const speed = APP.scrollSpeeds[control] || 1;
         switch (control) {
             case 'key': {
@@ -2693,9 +2733,29 @@ PLAY / STOP
         }
         APP.updateUI();
     };
+
     APP.handleMinus = function() {
+        const now = Date.now();
+        if (now - lastPlusMinusCall < debounceTime) return;
+        lastPlusMinusCall = now;
+
         const control = APP.state.selectedControl;
-        if (!control) return;
+        if (!control) {
+             if (APP.state.lastActiveSlot) {
+                const [note, slotIndexStr] = APP.state.lastActiveSlot.split('-');
+                const slotIndex = parseInt(slotIndexStr, 10);
+                const availableChords = APP.MusicEngine.getAvailableChords(note, APP.state.mode, APP.state.selectedKey);
+                 if (availableChords.length > 0) {
+                    const slotKey = `${note}-${slotIndex}`;
+                    const currentChordIndex = APP.state.slotChordIndices[slotKey] || 0;
+                    const nextChordIndex = (currentChordIndex - 1 + availableChords.length) % availableChords.length;
+                    APP.state.slotChordIndices[slotKey] = nextChordIndex;
+                    APP.updatePianoKeys();
+                }
+            }
+            return;
+        }
+
         const speed = APP.scrollSpeeds[control] || 1;
         switch (control) {
             case 'key': {
@@ -2949,6 +3009,72 @@ PLAY / STOP
         setupInteraction('xl-button', APP.handleSizePress);
         setupInteraction('plus-btn', APP.handlePlus);
         setupInteraction('minus-btn', APP.handleMinus);
+
+        let tempoInterval = null;
+        let tempoAcceleration = 1;
+
+        const startTempoScroll = (handler) => {
+            if (APP.state.selectedControl !== 'tempo') return;
+
+            handler(); // Initial call
+
+            if (tempoInterval) clearInterval(tempoInterval);
+
+            tempoAcceleration = 1;
+            let executionCount = 0;
+            tempoInterval = setInterval(() => {
+                executionCount++;
+                if (executionCount > 5 && executionCount % 2 === 0) {
+                    tempoAcceleration = Math.min(10, tempoAcceleration + 1);
+                }
+
+                const originalSpeed = APP.scrollSpeeds.tempo;
+                APP.scrollSpeeds.tempo = tempoAcceleration;
+                handler();
+                APP.scrollSpeeds.tempo = originalSpeed;
+
+            }, 150);
+        };
+
+        const stopTempoScroll = () => {
+            if (tempoInterval) {
+                clearInterval(tempoInterval);
+                tempoInterval = null;
+            }
+        };
+
+        const plusBtn = document.getElementById('plus-btn');
+        const minusBtn = document.getElementById('minus-btn');
+
+        if (plusBtn) {
+            plusBtn.addEventListener('mousedown', () => startTempoScroll(APP.handlePlus));
+        }
+        if (minusBtn) {
+            minusBtn.addEventListener('mousedown', () => startTempoScroll(APP.handleMinus));
+        }
+
+        document.addEventListener('mouseup', stopTempoScroll);
+        document.addEventListener('mouseleave', stopTempoScroll);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '=' || e.key === '+') {
+                APP.handlePlus();
+                if (APP.state.selectedControl === 'tempo') {
+                    startTempoScroll(APP.handlePlus);
+                }
+            } else if (e.key === '-' || e.key === '_') {
+                APP.handleMinus();
+                if (APP.state.selectedControl === 'tempo') {
+                    startTempoScroll(APP.handleMinus);
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '_') {
+                stopTempoScroll();
+            }
+        });
 
         setupInteraction('play-btn', APP.handlePlay);
         setupInteraction('stop-btn', APP.handleStop);
