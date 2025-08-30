@@ -9,8 +9,9 @@ def run_verification(page: Page):
     # Capture console logs to help with debugging
     page.on("console", lambda msg: print(f"CONSOLE: {msg.text}"))
 
-    # 1. Arrange: Navigate to the local server URL.
-    page.goto('http://localhost:8000/GENIUS%20PEACE%2011.html')
+    # 1. Arrange: Navigate to the local HTML file.
+    # The application must work from a file:// URL.
+    page.goto(f'file://{os.getcwd()}/GENIUS%20PEACE%2011.html')
 
     # 2. Act & Assert: Wait for the main components to be visible.
     piano_section = page.locator('#piano-section')
