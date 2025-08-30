@@ -1,0 +1,1860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piano XL - HD Quality</title>
+    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+    <style>
+        body {
+            background: #000000;
+            min-height: 100vh;
+            font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: auto;
+            /* Prevent text selection and drag behavior globally */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            top: -50px; /* shift entire UI up by 50px */
+            min-width: 1000px;
+            width: 100%;
+        }
+
+
+
+        /* Piano XL Section */
+        .piano-xl-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            min-width: 1000px;
+            margin: 31px 100px 0 100px;
+        }
+
+        /* Controls Row */
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 750px;
+            flex-shrink: 0;
+            margin-top: 16px;
+        }
+
+        .control-btn {
+            background: linear-gradient(145deg, #4a4a4a 0%, #2a2a2a 50%, #1a1a1a 100%);
+            border: 1px solid #555;
+            border-radius: 12px;
+            box-shadow:
+                0 8px 16px rgba(0, 0, 0, 0.8),
+                0 4px 8px rgba(0, 0, 0, 0.6),
+                inset 0 1px 2px rgba(255, 255, 255, 0.2),
+                inset 0 -1px 2px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            position: relative;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .control-btn:active {
+            transform: translateY(1px);
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.8),
+                inset 0 2px 4px rgba(0, 0, 0, 0.6),
+                inset 0 -1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn.selected {
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px 2px rgba(78, 34, 16, 0.9), 0 0 22px 6px rgba(78, 34, 16, 0.5);
+        }
+
+        /* Specific widths and layouts for each control */
+        .bass-btn { width: 64px; height: 64px; font-size: 24px; }
+        .filter-knob { width: 64px; height: 64px; }
+        .transpose-knob { width: 64px; height: 64px; }
+        .sounds-btn { width: 80px; height: 64px; font-size: 14px; }
+
+        .knob {
+            background: radial-gradient(ellipse at 30% 30%, #5a5a5a 0%, #3a3a3a 30%, #2a2a2a 60%, #1a1a1a 80%, #000 100%);
+            border: 1px solid #666;
+            border-radius: 50%;
+            box-shadow:
+                0 8px 16px rgba(0, 0, 0, 0.8),
+                0 4px 8px rgba(0, 0, 0, 0.6),
+                inset 0 2px 4px rgba(255, 255, 255, 0.15),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.6);
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .knob.selected {
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px 2px rgba(78, 34, 16, 0.9), 0 0 22px 6px rgba(78, 34, 16, 0.5);
+        }
+
+        .knob:active {
+            transform: translateY(1px);
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.8),
+                inset 0 3px 6px rgba(0, 0, 0, 0.7),
+                inset 0 -1px 2px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Knob indicators removed - using numbers as indicators instead */
+
+        .knob-name {
+            color: #aaa;
+            font-size: 10px;
+            font-weight: 500;
+            position: absolute;
+            top: calc(25% - 4px);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            width: 100%;
+        }
+
+        .knob-value {
+            color: white;
+            font-size: 14px;
+            font-weight: 100;
+            position: absolute;
+            top: calc(65% - 7px);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        .key-btn { width: 56px; height: 64px; }
+        .mode-btn {
+            width: 101px;
+            height: 64px;
+            position: relative;
+        }
+
+        .mode-header {
+            font-size: 10px;
+            color: #aaa;
+            text-align: center;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: absolute;
+            top: -36px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            white-space: normal;
+        }
+
+        /* All mode headers now positioned at same height */
+        .mode-header[data-system="harmonicMinor"],
+        .mode-header[data-system="harmonicMajor"] {
+            top: -36px;
+        }
+        .oct-btn { width: 56px; height: 64px; }
+        .inv-btn { width: 56px; height: 64px; }
+        .chord-btn { width: 96px; height: 64px; }
+
+        .btn-label {
+            font-size: 10px;
+            color: #aaa;
+            position: absolute;
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            width: 100%;
+        }
+
+        .btn-value {
+            font-size: 18px;
+            font-weight: 400;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Mode button value centering with multi-line support */
+        .mode-btn .btn-value {
+            text-align: center;
+            width: 100%;
+            left: 0;
+            transform: none;
+            white-space: normal;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1px 4px;
+            min-height: 100%;
+        }
+
+        /* Special styling for AEOLIAN mode to show NATURAL MINOR header */
+        .mode-btn[data-current-mode="AEOLIAN"] .btn-value::before {
+            content: "NATURAL MINOR";
+            font-size: 14px;
+            color: #fff;
+            line-height: 1.2;
+            margin-bottom: 3px;
+            font-weight: 500;
+            transform: translateY(3px);
+        }
+
+        /* Make AEOLIAN text smaller and lighter */
+        .mode-btn[data-current-mode="AEOLIAN"] .btn-value {
+            font-size: 10px !important;
+            font-weight: 300;
+            color: #888;
+        }
+
+        /* Special styling for IONIAN mode to show NATURAL MAJOR header */
+        .mode-btn[data-current-mode="IONIAN"] .btn-value::before {
+            content: "NATURAL MAJOR";
+            font-size: 14px;
+            color: #fff;
+            line-height: 1.2;
+            margin-bottom: 3px;
+            font-weight: 500;
+            transform: translateY(3px);
+        }
+
+        /* Make IONIAN text smaller and lighter */
+        .mode-btn[data-current-mode="IONIAN"] .btn-value {
+            font-size: 10px !important;
+            font-weight: 300;
+            color: #888;
+        }
+
+        /* Scale degree display styling - uses existing app colors */
+        .scale-degree {
+            font-size: 18px !important;
+            font-weight: 700 !important;
+            /* Uses existing white text color from the app */
+        }
+
+        /* Base font size for mode button values */
+        .mode-btn .btn-value {
+            font-size: 16px; /* Smaller default size */
+        }
+
+        /* Piano keys */
+        .piano-section {
+            margin-top: 40px;
+            position: relative;
+        }
+
+        .black-keys {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .white-keys {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .piano-key {
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            /* Children (.key-slot) will evenly fill using flex */
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            padding: 2px;
+        }
+
+        .white-key {
+            width: 64px;
+            height: 128px;
+            background: linear-gradient(145deg, #606060 0%, #505050 30%, #404040 70%, #2a2a2a 100%);
+            border: 1px solid #777;
+            box-shadow:
+                0 8px 16px rgba(0, 0, 0, 0.8),
+                0 4px 8px rgba(0, 0, 0, 0.6),
+                0 0 12px rgba(255, 140, 0, 0.6),
+                0 0 24px rgba(255, 140, 0, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.15),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .black-key {
+            width: 64px;
+            height: 128px;
+            background: linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 30%, #0a0a0a 70%, #000000 100%);
+            border: 1px solid #444;
+            box-shadow:
+                0 8px 16px rgba(0, 0, 0, 0.9),
+                0 4px 8px rgba(0, 0, 0, 0.7),
+                0 0 12px rgba(255, 140, 0, 0.6),
+                0 0 24px rgba(255, 140, 0, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.08),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.6);
+            z-index: 10;
+        }
+
+        .piano-key.disabled {
+            /* Visuals remain unchanged when disabled; behavior handled in JS */
+        }
+
+        .piano-key.out-of-scale {
+            background: linear-gradient(145deg, #404040 0%, #303030 50%, #202020 100%);
+            border: 1px solid rgba(102, 102, 102, 0.5);
+            opacity: 0.5;
+        }
+
+        .piano-key:active {
+            transform: translateY(2px);
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.8),
+                inset 0 3px 6px rgba(0, 0, 0, 0.6);
+        }
+
+        /* When any slot in a key is active, make the whole key transparent to show the skin */
+        .piano-key.pressed {
+            background: transparent !important;
+        }
+
+        .spacer {
+            width: 64px;
+        }
+
+        .key-slot {
+            flex: 1 1 0%;
+            min-height: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 4px;
+            box-sizing: border-box; /* include padding/border in height */
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border-radius: 0; /* will be set on first/last child below */
+            /* Prevent text selection and drag behavior */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            /* Prevent drag behavior */
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            user-drag: none;
+        }
+
+        .key-slot:not(:last-child) {
+            border-bottom: 1px solid rgba(128, 128, 128, 0.35);
+        }
+
+        /* Rounded corners for stacks */
+        .piano-key .key-slot:first-child { border-radius: 12px 12px 0 0; }
+        .piano-key .key-slot:last-child { border-radius: 0 0 12px 12px; }
+        .mode-xl .key-slot { border-radius: 12px; }
+
+        .key-slot.active {
+            background: transparent;
+            box-shadow: none;
+        }
+
+        /* Only XL uses whole-key pressed visuals */
+        .mode-xl .piano-key.pressed .key-slot {
+            background: transparent !important;
+        }
+
+        .key-slot.disabled {
+            /* Visuals remain unchanged when disabled; only text is hidden via logic */
+        }
+
+        .slot-text {
+            color: white;
+            font-weight: 500;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            font-size: 14px;
+        }
+
+        .slot-text.hidden {
+            color: transparent !important;
+        }
+
+        /* (removed) per-key copy badge */
+
+        /* In stacked modes, give slots their own fill so active can go transparent to reveal skin */
+        .mode-xxl .key-slot,
+        .mode-xxxl .key-slot,
+        .mode-x .key-slot {
+            background: linear-gradient(145deg, #606060 0%, #505050 30%, #404040 70%, #2a2a2a 100%);
+            border-radius: 4px !important;
+        }
+
+        /* In stacked modes, individual sharp slots are dark, but become fully transparent when active */
+        .mode-xxl #key-C\# .key-slot,
+        .mode-xxl #key-D\# .key-slot,
+        .mode-xxl #key-F\# .key-slot,
+        .mode-xxl #key-G\# .key-slot,
+        .mode-xxl #key-A\# .key-slot,
+        .mode-xxxl #key-C\# .key-slot,
+        .mode-xxxl #key-D\# .key-slot,
+        .mode-xxxl #key-F\# .key-slot,
+        .mode-xxxl #key-G\# .key-slot,
+        .mode-xxxl #key-A\# .key-slot,
+        .mode-x #key-C\# .key-slot,
+        .mode-x #key-D\# .key-slot,
+        .mode-x #key-F\# .key-slot,
+        .mode-x #key-G\# .key-slot,
+        .mode-x #key-A\# .key-slot {
+            background: linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 30%, #0a0a0a 70%, #000000 100%);
+            border: 1px solid #444;
+        }
+
+        /* Ensure active slots in stacked modes become transparent on press */
+        .mode-xxl .key-slot.active,
+        .mode-xxxl .key-slot.active,
+        .mode-x .key-slot.active {
+            background: transparent !important;
+            box-shadow: none;
+        }
+
+        /* Ensure sharp key slots in stacked modes also become transparent on press */
+        .mode-xxl #key-C\# .key-slot.active,
+        .mode-xxl #key-D\# .key-slot.active,
+        .mode-xxl #key-F\# .key-slot.active,
+        .mode-xxl #key-G\# .key-slot.active,
+        .mode-xxl #key-A\# .key-slot.active,
+        .mode-xxxl #key-C\# .key-slot.active,
+        .mode-xxxl #key-D\# .key-slot.active,
+        .mode-xxxl #key-F\# .key-slot.active,
+        .mode-xxxl #key-G\# .key-slot.active,
+        .mode-xxxl #key-A\# .key-slot.active,
+        .mode-x #key-C\# .key-slot.active,
+        .mode-x #key-D\# .key-slot.active,
+        .mode-x #key-F\# .key-slot.active,
+        .mode-x #key-G\# .key-slot.active,
+        .mode-x #key-A\# .key-slot.active {
+            background: transparent !important;
+        }
+
+        /* In stacked modes, keep black keys visually black, but allow press to reveal skin */
+        .mode-xxl .black-key,
+        .mode-xxxl .black-key,
+        .mode-x .black-key {
+            /* Parent key stays transparent so active slot can reveal skin */
+            background: transparent !important;
+            border: 1px solid #444;
+            box-shadow:
+                0 8px 16px rgba(0, 0, 0, 0.9),
+                0 4px 8px rgba(0, 0, 0, 0.7),
+                0 0 12px rgba(255, 140, 0, 0.6),
+                0 0 24px rgba(255, 140, 0, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.08),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.6) !important;
+        }
+
+        /* Pressed state must be transparent even in stacked modes for black keys */
+        .mode-xxl .black-key.pressed,
+        .mode-xxxl .black-key.pressed,
+        .mode-x .black-key.pressed {
+            background: transparent !important;
+        }
+
+        /* White keys in stacked modes remain transparent to show skin beneath slots */
+        .mode-xxl .white-key,
+        .mode-xxxl .white-key,
+        .mode-x .white-key {
+            background: transparent !important;
+        }
+
+        /* Match white key overlays to black key overlays for consistent transparency */
+        .mode-xxl .white-key,
+        .mode-xxxl .white-key,
+        .mode-x .white-key {
+            border: 1px solid #444 !important;
+            box-shadow:
+                0 8px 16px rgba(0, 0, 0, 0.9),
+                0 4px 8px rgba(0, 0, 0, 0.7),
+                0 0 12px rgba(255, 140, 0, 0.6),
+                0 0 24px rgba(255, 140, 0, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.08),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.6) !important;
+        }
+
+        /* Mode-specific heights */
+        .mode-xl .piano-key { height: 128px; }
+        .mode-xxl .piano-key { height: 128px; }
+        .mode-xxxl .piano-key { height: 128px; }
+        .mode-x .piano-key { height: 192px; }
+
+        .mode-xl .key-slot {
+            align-items: flex-end;
+            padding-bottom: 8px;
+        }
+
+        /* Side PIANO Label (original position) */
+        .piano-text-container {
+            position: absolute;
+            left: 39px;
+            top: calc(50% + 140px);
+            transform: translateY(-50%) rotate(-90deg);
+            pointer-events: auto;
+            z-index: 1001;
+        }
+
+        /* Top title */
+        .top-title-container {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translate(-50%, -50px); /* move header up by 50px */
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .xl-button-container {
+            position: absolute;
+            left: 50px;
+            top: calc(50% - 6px);
+            transform: translateY(-50%) rotate(-90deg);
+            pointer-events: none;
+        }
+
+        /* Keyboard help panel (appears on P I A N O hover) */
+        .kbd-help-panel {
+            position: fixed;
+            display: none;
+            background: rgba(0,0,0,0.85);
+            border: 1px solid #444;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            padding: 12px 14px;
+            z-index: 2147483647; /* ensure above absolutely everything */
+            pointer-events: auto; /* allow interaction when open */
+            color: #fff;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 360px;
+        }
+        .kbd-help-panel.show { display: block; }
+        .kbd-help-panel img { display: none; }
+        .kbd-help-panel pre {
+            margin: 0;
+            white-space: pre; /* preserve exact newlines and spacing */
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .kbd-help-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin: 2px 0 8px;
+        }
+
+        /* Static shortcut-keys visual button (no action) */
+        .shortcut-keys-btn {
+            width: 112px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #111;
+            position: relative;
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.06), 0 4px 8px rgba(0,0,0,0.5);
+            pointer-events: none; /* purely visual */
+            opacity: 0.9;
+        }
+        .shortcut-keys-btn::after {
+            content: '';
+            position: absolute;
+            inset: 4px 6px;
+            background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='200' height='60' viewBox='0 0 200 60'>\
+  <rect x='0' y='0' width='200' height='60' rx='8' ry='8' fill='none' stroke='#2b2b2b' stroke-width='6'/>\
+  <g fill='#4b1d58' stroke='#ff8c00' stroke-width='2'>\
+    <rect x='10' y='8' width='20' height='16'/>\
+    <rect x='62' y='20' width='20' height='16'/>\
+    <rect x='86' y='20' width='20' height='16'/>\
+    <rect x='114' y='20' width='20' height='16'/>\
+    <rect x='142' y='20' width='20' height='16'/>\
+    <rect x='22' y='36' width='70' height='16'/>\
+    <rect x='54' y='8' width='30' height='16'/>\
+    <rect x='132' y='8' width='30' height='16'/>\
+  </g>\
+</svg>");
+            background-size: cover;
+            background-repeat: no-repeat;
+            filter: drop-shadow(0 0 2px rgba(0,0,0,0.6));
+        }
+
+        .piano-text {
+            color: white;
+            font-size: 23px;
+            font-weight: 100;
+            letter-spacing: 4px;
+            cursor: pointer;
+        }
+        /* Enlarge only the top title */
+        .top-title-container .piano-text { font-size: 46px; }
+
+        .xl-button {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: 2px solid #333;
+            border-radius: 16px;
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            width: 94px;
+            height: 69px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 23px;
+            font-weight: 100;
+            letter-spacing: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            pointer-events: auto;
+            position: relative;
+        }
+
+        .xl-button.selected {
+            border-color: #ffffff;
+            box-shadow: 0 0 10px 2px rgba(78, 34, 16, 0.9), 0 0 22px 6px rgba(78, 34, 16, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .xl-button:active {
+            transform: translateY(1px);
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.8),
+                inset 0 3px 6px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Plus/Minus side buttons */
+        .side-buttons {
+            position: absolute;
+            right: 100px;
+            top: calc(50% + 67px);
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Vertical Fader */
+        .fader-container {
+            position: absolute;
+            right: 203px;
+            top: calc(50% - 5px);
+            transform: translateY(-50%);
+            z-index: 50;
+        }
+
+        .vertical-fader {
+            width: 6px;
+            height: 114px;
+            background: #2b2b2b; /* grey track */
+            border: 2px solid #000; /* black border */
+            border-radius: 15px;
+            box-shadow: none;
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .fader-thumb {
+            width: 33px;
+            height: 10px;
+            background: #2b2b2b; /* match track grey */
+            border: 1px solid #000; /* black border */
+            border-radius: 4px;
+            box-shadow: none;
+            position: absolute;
+            left: -13.5px;
+            top: 85px;
+            cursor: grab;
+            transition: all 0.1s ease;
+        }
+
+        .side-btn {
+            width: 48px;
+            height: 128px;
+            background: linear-gradient(145deg, #4a4a4a 0%, #2a2a2a 50%, #1a1a1a 100%);
+            border: 1px solid #555;
+            border-radius: 8px;
+            box-shadow:
+                0 8px 16px rgba(0, 0, 0, 0.8),
+                0 4px 8px rgba(0, 0, 0, 0.6),
+                inset 0 2px 4px rgba(255, 255, 255, 0.15),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .side-btn:active {
+            transform: translateY(2px);
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.8),
+                inset 0 3px 6px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Bottom buttons */
+        .bottom-buttons {
+            position: absolute;
+            bottom: -96px; /* Moved up 11px from -107px to -96px for better centering between PIANO and Sequencer */
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .bottom-btn {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: 2px solid #333;
+            border-radius: 12px;
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .bottom-btn:active {
+            transform: translateY(1px);
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.8),
+                inset 0 3px 6px rgba(0, 0, 0, 0.6);
+        }
+
+        .camera-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+        }
+
+        .disable-btn {
+            width: 48px;
+            height: 48px;
+        }
+
+        .save-btn {
+            width: 48px;
+            height: 48px;
+        }
+
+        .progression-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            color: white;
+        }
+
+        /* MIDI Indicator */
+        .midi-indicator {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .midi-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .midi-dot.active {
+            background: #4ade80;
+        }
+
+
+
+        /* Slot level indicator */
+        .slot-indicator {
+            position: absolute;
+            top: 60px;
+            right: 24px;
+            color: #fbbf24;
+            font-size: 12px;
+            display: none;
+        }
+
+        .slot-indicator.show {
+            display: block;
+        }
+
+        /* Background image */
+        .background-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+        }
+
+        .background-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: -1;
+        }
+
+        /* Preset/Finder popup anchored near camera button */
+        .bg-menu {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.6);
+            padding: 8px;
+            display: none;
+            z-index: 9999;
+            min-width: 160px;
+        }
+        .bg-menu.show { display: block; }
+        .bg-menu button {
+            width: 100%;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin: 4px 0;
+            cursor: pointer;
+            text-align: left;
+        }
+        .bg-presets {
+            margin-top: 6px;
+            display: none;
+            max-height: 220px;
+            overflow: auto;
+        }
+        .bg-presets.show { display: block; }
+        .bg-preset-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .bg-preset-item:hover {
+            background: rgba(255,255,255,0.06);
+        }
+        .bg-thumb {
+            width: 48px;
+            height: 28px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #333;
+        }
+
+        /* Chord input field */
+        .chord-input-container {
+            position: relative;
+        }
+
+        .ask-ai-btn {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 10px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: 6px;
+            color: #fff;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+        }
+
+        .ask-ai-btn:hover {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+
+        .ask-ai-btn.active {
+            background: #1a1a1a;
+            border-color: #666;
+            color: #fff;
+        }
+
+        .chord-input {
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: 8px;
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.6),
+                inset 0 2px 4px rgba(0, 0, 0, 0.4);
+            width: 240px;
+            height: 40px;
+            padding: 0 12px;
+            color: #aaa;
+            font-size: 12px;
+            font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+            text-align: center;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .chord-input:focus {
+            border-color: white;
+            color: white;
+        }
+
+        .chord-input::placeholder {
+            color: #666;
+            font-style: normal; /* Removed italic to prevent leaning */
+            text-align: center;
+            line-height: 24px; /* Match the main line-height for centering */
+            vertical-align: middle;
+            font-size: 60%; /* Reduced by 40% for better artistic balance */
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; /* Softer, less sharp font */
+        }
+
+
+
+        .ai-response-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 16px 0;
+            padding: 12px 0;
+            border-top: 1px solid #333;
+        }
+
+
+
+        /* Chord Progression Sequencer */
+        .sequencer-container {
+            background: transparent;
+            border: none;
+            padding: 19px;
+            position: absolute;
+            top: calc(100% + 118px); /* Moved up by 22px from 140px to 118px */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            width: 100%; /* container spans page; inner elements manage their own width */
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        /* Keep control row fixed width and centered */
+        .sequencer-controls {
+            width: 640px;
+            margin: 0 auto 20px;
+        }
+
+        /* Base step grid width and centered */
+        #step-container {
+            width: 640px;
+            margin: 0 auto;
+        }
+
+        /* Expand only the step grid area for >4 bars; controls remain fixed */
+        .sequencer-container.bars-4 #step-container { width: 640px; }
+        .sequencer-container.bars-5 #step-container,
+        .sequencer-container.bars-6 #step-container { width: 960px; }
+        .sequencer-container.bars-7 #step-container,
+        .sequencer-container.bars-8 #step-container { width: 1280px; }
+
+        .sequencer-container.hidden {
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Sequencer Status Area */
+        .sequencer-status {
+            margin-top: 15px;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        .status-text {
+            color: #ccc;
+            font-size: 14px;
+            font-style: italic;
+            transition: all 0.3s ease;
+        }
+
+        .status-text.looping {
+            color: #ff6b35;
+            font-weight: bold;
+            font-style: normal;
+        }
+
+        .status-text.copied {
+            color: #4ade80;
+            font-weight: bold;
+            font-style: normal;
+        }
+
+
+
+
+
+        .sequencer-header {
+            color: white;
+            font-size: 18px;
+            font-weight: 400;
+            text-align: center;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .sequencer-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 6px;
+        }
+
+        .sequencer-btn {
+            background: linear-gradient(145deg, #232323 0%, #141414 40%, #050505 100%);
+            border: 1px solid #333;
+            border-radius: 8px;
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.6),
+                0 2px 4px rgba(0, 0, 0, 0.4),
+                inset 0 1px 2px rgba(255, 255, 255, 0.02),
+                inset 0 -2px 3px rgba(0, 0, 0, 0.4);
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+        }
+
+        /* White border when a sequencer control (like SEQ) is selected */
+        #seq-btn.selected {
+            border: 2px solid #ffffff !important;
+            box-shadow: 0 0 10px 2px rgba(78, 34, 16, 0.9), 0 0 22px 6px rgba(78, 34, 16, 0.5);
+        }
+
+        .sequencer-btn:active {
+            transform: translateY(1px);
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.8),
+                inset 0 2px 4px rgba(0, 0, 0, 0.6);
+        }
+
+        .play-btn {
+            width: 72px;
+            height: 55px;
+            font-size: 22px;
+            color: #8B4513;
+        }
+
+        .stop-btn {
+            width: 48px;
+            height: 55px;
+            font-size: 18px;
+            color: #888;
+        }
+
+        .clear-btn {
+            width: 72px;
+            height: 55px;
+            font-size: 14px;
+            color: #888;
+        }
+
+        .tempo-display, .bars-display {
+            background: linear-gradient(145deg, #232323 0%, #141414 40%, #050505 100%);
+            border: 1px solid #333;
+            border-radius: 8px;
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.6),
+                0 2px 4px rgba(0, 0, 0, 0.4),
+                inset 0 1px 2px rgba(255, 255, 255, 0.02),
+                inset 0 -2px 3px rgba(0, 0, 0, 0.4);
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+            width: 72px;
+            height: 55px;
+            flex-direction: column;
+            position: relative; /* keep BPM/BARS label anchored inside button */
+        }
+
+        /* BPM selected white border (from bak) */
+        .tempo-display.selected {
+            border: 2px solid #ffffff !important;
+            box-shadow: 0 0 10px 2px rgba(78, 34, 16, 0.9), 0 0 22px 6px rgba(78, 34, 16, 0.5);
+        }
+
+        .tempo-label, .bars-label {
+            font-size: 10px;
+            color: #aaa;
+            margin-bottom: 1px;
+            line-height: 1;
+            position: absolute;
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+
+        .tempo-value,         .bars-value {
+            font-size: 18px;
+            line-height: 1;
+            margin-top: 8px;
+        }
+
+        .time-signature-label {
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 2px;
+            line-height: 1;
+        }
+
+
+
+        .tempo-display:active, .bars-display:active {
+            transform: translateY(1px);
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.8),
+                inset 0 2px 4px rgba(0, 0, 0, 0.6);
+        }
+
+        .click-btn {
+            width: 72px;
+            height: 55px;
+            font-size: 14px;
+            color: #888;
+        }
+        .tap-btn {
+            width: 72px;
+            height: 55px;
+            font-size: 14px;
+            color: #ffffff;
+        }
+
+        .midi-btn {
+            width: 72px;
+            height: 55px;
+            font-size: 18px;
+            color: #6366f1; /* keep purple text */
+            position: relative;
+        }
+        .seq-label {
+            position: absolute;
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #9aa0ff;
+            line-height: 1;
+            pointer-events: none;
+        }
+        .seq-value {
+            margin-top: 10px;
+        }
+
+        .step-grid-container {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 12px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .step-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 9px;
+            align-items: start;
+        }
+
+        /* 3/4 time signature grid - 3 columns instead of 4 */
+        .step-grid[data-time-signature="3/4"] {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* Adjust spacing for 3/4 time to make it look balanced */
+        .step-grid[data-time-signature="3/4"] .step-slot {
+            min-width: 40px; /* Slightly wider slots for 3/4 time */
+        }
+
+        /* Keep step-grid flexible; container width scales for >4 bars */
+
+        .step-slot {
+            width: calc(100% - 7px);
+            height: 38px;
+            background: linear-gradient(145deg, #232323 0%, #141414 40%, #050505 100%);
+            border: 1px solid #333;
+            border-radius: 8px;
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.45),
+                inset 0 1px 2px rgba(255, 255, 255, 0.02),
+                inset 0 -2px 3px rgba(0, 0, 0, 0.4);
+            color: #ddd;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+            min-width: 33px;
+        }
+
+        /* Keep step-slot sizing consistent; widen container instead of shrinking buttons */
+
+        .step-slot:hover {
+            border-color: #444;
+            background: linear-gradient(145deg, #2b2b2b 0%, #191919 40%, #0b0b0b 100%);
+        }
+
+        .step-slot.active {
+            border-color: #ff8c00;
+            background: linear-gradient(145deg, #3a2a1a, #2a1a0a);
+            color: white;
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.6),
+                0 0 8px rgba(255, 140, 0, 0.3),
+                inset 0 1px 2px rgba(255, 140, 0, 0.2);
+        }
+
+        .step-slot.selected {
+            border-color: rgba(255, 140, 0, 0.4);
+            background: linear-gradient(145deg, #2b1d10 0%, #180d04 50%, #090909 100%);
+            box-shadow:
+                0 0 8px rgba(255, 140, 0, 0.15),
+                inset 0 1px 2px rgba(255, 140, 0, 0.1);
+        }
+
+        .step-slot.duration-edit {
+            border-color: #ffffff;
+            border-width: 2px;
+            background: linear-gradient(145deg, #2b2b2b 0%, #191919 40%, #0b0b0b 100%);
+            box-shadow:
+                0 0 12px rgba(255, 255, 255, 0.3),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .bar-divider {
+            width: 3px;
+            background: #000000;
+            margin: 0 2px;
+        }
+
+        /* Time Signature Modal */
+        .time-signature-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .time-signature-modal.show { display: flex; }
+        .time-signature-modal .time-signature-content {
+            width: 400px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow: hidden;
+            border-radius: 12px;
+            background: #111;
+            border: 1px solid #333;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+        }
+        .time-signature-header {
+            padding: 18px 20px;
+            color: #fff;
+            font-size: 21px;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .time-signature-close {
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .time-signature-body {
+            padding: 21px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .time-signature-option {
+            padding: 16px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .time-signature-option:hover {
+            background: #2a2a2a;
+            border-color: #555;
+        }
+        .time-signature-option.selected {
+            background: #3a2a1a;
+            border-color: #ff8c00;
+        }
+        .time-signature-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        .time-signature-description {
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        /* Save/Load Modal */
+        .song-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .song-modal.show { display: flex; }
+        .song-modal .song-content {
+            width: 720px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow: hidden;
+            border-radius: 12px;
+            background: #111;
+            border: 1px solid #333;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .palette-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: #3a3a3a;
+            border-radius: 8px;
+            border: 1px solid #555;
+        }
+
+        .palette-name {
+            font-weight: 500;
+            color: white;
+        }
+
+        .palette-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .palette-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .palette-btn.load {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .palette-btn.load:hover {
+            background: #45a049;
+        }
+
+        .palette-btn.delete {
+            background: #f44336;
+            color: white;
+        }
+
+        .palette-btn.delete:hover {
+            background: #d32f2f;
+        }
+        .song-header {
+            padding: 18px 20px; /* +30% */
+            color: #fff;
+            font-size: 21px; /* +30% */
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .song-tabs {
+            display: flex;
+            gap: 8px; /* +30% */
+            padding: 13px 16px; /* +30% */
+            border-bottom: 1px solid #222;
+        }
+        .song-tab {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #ddd;
+            padding: 8px 13px; /* +30% */
+            border-radius: 10px; /* +25% */
+            cursor: pointer;
+            font-size: 18px; /* larger text */
+        }
+        .song-tab.active { border-color: #fff; color: #fff; }
+        .song-body { padding: 21px; overflow: auto; color: #ddd; font-size: 18px; }
+        .song-row { display: flex; gap: 10px; align-items: center; margin-bottom: 13px; }
+        .song-input { flex: 1; background:#0f0f0f; color:#fff; border:1px solid #333; border-radius:10px; padding:10px 12px; font-size: 18px; }
+        .song-btn { background:#222; color:#fff; border:1px solid #444; border-radius:10px; padding:10px 16px; cursor:pointer; font-size: 18px; }
+
+        .send-to-ai-btn {
+            background: #1a1a1a;
+            border: 1px solid #4ade80;
+            color: #4ade80;
+        }
+
+        .send-to-ai-btn:hover {
+            background: #4ade80;
+            color: #000;
+        }
+        .song-list { display:flex; flex-direction:column; gap:8px; }
+        .song-item { display:flex; align-items:center; justify-content:space-between; background:#151515; border:1px solid #333; border-radius:10px; padding:10px 13px; font-size: 18px; }
+        .song-name { color:#fff; }
+        .song-actions { display:flex; gap:8px; }
+        .song-checks { display:flex; gap:16px; margin: 8px 0 16px; font-size: 18px; }
+
+        /* Global content offset (excludes fixed top title) */
+        #app-content { transform: translateY(50px); }
+
+
+    </style>
+</head>
+<body>
+    <!-- Background elements -->
+    <img id="background-image" class="background-image" style="display: none;">
+    <div id="background-overlay" class="background-overlay" style="display: none;"></div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="file-input" accept="image/*" style="display: none;">
+
+    <!-- Eye button removed -->
+
+    <!-- MIDI and slot indicators -->
+    <div class="midi-indicator">
+        <div class="midi-dot" id="midi-dot"></div>
+        <span>MIDI <span id="midi-status">OFF</span></span>
+    </div>
+
+
+
+    <div class="slot-indicator" id="slot-indicator">
+        <span>SLOT: <span id="slot-number">1</span> ↑↓</span>
+    </div>
+
+    <div id="app-content" class="main-container">
+
+
+        <div class="piano-xl-container">
+            <!-- Controls Row -->
+            <div class="controls-row">
+                <!-- Bass Button -->
+                <div class="control-btn bass-btn" id="bass-btn">𝄢</div>
+
+                <!-- Filter Knob -->
+                <div class="knob filter-knob" id="filter-knob">
+                    <div class="knob-name">REVERB</div>
+                    <div class="knob-value" id="filter-value">1</div>
+                </div>
+
+                <!-- Transpose Knob -->
+                <div class="knob transpose-knob" id="transpose-knob">
+                    <div class="knob-name">DELAY</div>
+                    <div class="knob-value" id="transpose-value">0</div>
+                </div>
+
+                <!-- Sounds Button -->
+                <div class="control-btn sounds-btn" id="sounds-btn">
+                    <div class="btn-label">SOUNDS</div>
+                    <div class="btn-value" id="sound-name">11</div>
+                </div>
+
+                <!-- Key Button -->
+                <div class="control-btn key-btn" id="key-btn">
+                    <div class="btn-label">KEY</div>
+                    <div class="btn-value" id="key-value">C</div>
+                </div>
+
+                <!-- Mode Button -->
+                <div class="control-btn mode-btn" id="mode-btn">
+                    <div class="mode-header" id="mode-header">MODE</div>
+                    <div class="btn-value" id="mode-value">IONIAN</div>
+                </div>
+
+                <!-- Octave Button -->
+                <div class="control-btn oct-btn" id="oct-btn">
+                    <div class="btn-label">OCT</div>
+                    <div class="btn-value" id="oct-value">0</div>
+                </div>
+
+                <!-- Inversion Button -->
+                <div class="control-btn inv-btn" id="inv-btn">
+                    <div class="btn-label">INV</div>
+                    <div class="btn-value" id="inv-value">-2</div>
+                </div>
+
+                <!-- Chord Button -->
+                <div class="control-btn chord-btn" id="chord-btn">
+                    <div class="btn-label">CHORD</div>
+                    <div class="btn-value" id="chord-value">---</div>
+                </div>
+            </div>
+
+
+            <!-- Side PIANO Label (restored) -->
+            <div class="piano-text-container">
+                <span class="piano-text" id="piano-label">P I A N O</span>
+                <!-- Keyboard help panel (hover text) -->
+                <div class="kbd-help-panel" id="kbd-help"><div class="kbd-help-title">SHORTCUTS</div><pre>
+PIANO WHITE KEYS:
+A, S, D, F, G, H, J
+
+PIANO BLACK KEYS:
+W, E, T, Y, U
+
++ : SCROLL
+- : SCROLL
+
+LEFT & RIGHT ARROWS:
+NAVIGATES THROUGH THE SETTINGS
+
+UP & DOWN ARROWS:
+TO PLAY THE VARIOUS SLOT LEVELS
+(OF XXL, XXXL, AND X MODES)
+
+0:
+EXIT SELECTED SETTING
+
+ESC:
+EXIT TEXT INPUT FIELD
+
+SHIFT:
+HOLD SHIFT AND DOUBLE TAP CHORD
+LOCKS THE CURRENT OCTAVE AND INVERSION
+INTO A CHORD SLOT. (XXL, XXL, AND X MODES)
+
+SPACEBAR:
+SELECTS THE TEXT INPUT FIELD
+(WHEN SEQUENCER IS CLOSED)
+
+SPACEBAR:
+PLAY / STOP
+(WHEN SEQUENCER IS OPEN)
+</pre></div>
+            </div>
+
+            <!-- XL Button -->
+            <div class="xl-button-container">
+                <div class="xl-button" id="xl-button">XL</div>
+            </div>
+
+            <!-- Vertical Fader -->
+            <div class="fader-container">
+                <div class="vertical-fader" id="vertical-fader">
+                    <div class="fader-thumb" id="fader-thumb"></div>
+                </div>
+            </div>
+
+            <!-- Plus/Minus side buttons -->
+            <div class="side-buttons">
+                <div class="side-btn" id="plus-btn">+</div>
+                <div class="side-btn" id="minus-btn">−</div>
+            </div>
+
+            <!-- Piano Keys -->
+            <div class="piano-section mode-xl" id="piano-section">
+                <div class="black-keys">
+                    <div class="spacer"></div>
+                    <div class="piano-key black-key" data-note="C#" id="key-C#"></div>
+                    <div class="piano-key black-key" data-note="D#" id="key-D#"></div>
+                    <div class="spacer"></div>
+                    <div class="piano-key black-key" data-note="F#" id="key-F#"></div>
+                    <div class="piano-key black-key" data-note="G#" id="key-G#"></div>
+                    <div class="piano-key black-key" data-note="A#" id="key-A#"></div>
+                    <div class="spacer"></div>
+                </div>
+
+                <div class="white-keys">
+                    <div class="piano-key white-key" data-note="C" id="key-C"></div>
+                    <div class="piano-key white-key" data-note="D" id="key-D"></div>
+                    <div class="piano-key white-key" data-note="E" id="key-E"></div>
+                    <div class="piano-key white-key" data-note="F" id="key-F"></div>
+                    <div class="piano-key white-key" data-note="G" id="key-G"></div>
+                    <div class="piano-key white-key" data-note="A" id="key-A"></div>
+                    <div class="piano-key white-key" data-note="B" id="key-B"></div>
+                </div>
+
+                <!-- Bottom buttons -->
+                <div class="bottom-buttons">
+                    <div class="bottom-btn camera-btn" id="camera-btn" style="position: relative;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                    </div>
+
+                    <div class="bottom-btn disable-btn" id="disable-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="m4.9 4.9 14.2 14.2"/>
+                        </svg>
+                    </div>
+
+
+
+
+
+                    <!-- Chord input field -->
+                    <div class="chord-input-container">
+                        <input type="text" class="chord-input" id="chord-input" placeholder="" maxlength="100">
+
+                    </div>
+
+                    <div class="bottom-btn save-btn" id="save-btn">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                            <polyline points="17,21 17,13 7,13 7,21"/>
+                            <polyline points="7,3 7,8 15,8"/>
+                        </svg>
+                    </div>
+
+                    <div class="bottom-btn progression-btn" id="progression-btn">
+                        <span style="font-size: 18px; font-weight: 500;">▶</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chord Progression Sequencer -->
+        <div class="sequencer-container hidden" id="sequencer">
+            <!-- Control Row -->
+            <div class="sequencer-controls">
+                <div class="sequencer-btn play-btn" id="play-btn" title="Play sequence">▶</div>
+                <div class="sequencer-btn stop-btn" id="stop-btn" title="Stop sequence">◼</div>
+                <div class="sequencer-btn click-btn" id="click-btn" title="Toggle click track">CLICK</div>
+
+                <div class="tempo-display" id="tempo-display"
+                     onmousedown="startTempoLongPress(event)"
+                     onmouseup="endTempoLongPress(event)"
+                     onmouseleave="endTempoLongPress(event)"
+                     ontouchstart="startTempoLongPress(event)"
+                     ontouchend="endTempoLongPress(event)"
+                     title="Long press to change tempo">
+                    <div class="tempo-label">BPM</div>
+                    <div class="tempo-value" id="tempo-value">85</div>
+                </div>
+
+                <div class="bars-display" id="bars-display" title="Long press to change time signature">
+                    <div class="bars-label">BARS</div>
+                    <div class="bars-value" id="bars-value">2</div>
+                    <div class="time-signature-label" id="time-signature-label">4/4</div>
+                </div>
+
+                <div class="sequencer-btn tap-btn" id="tap-btn" title="Tap to set tempo">TAP</div>
+                <div class="sequencer-btn midi-btn" id="seq-btn" title="Change sequence">
+                    <div class="seq-label">SEQ</div>
+                    <div class="seq-value">1</div>
+                </div>
+            </div>
+
+            <!-- Dynamic Step Grid -->
+            <div id="step-container">
+                <!-- This will be populated by JavaScript -->
+            </div>
+
+            <!-- Sequencer Status Area -->
+            <div class="sequencer-status" id="sequencer-status">
+                <div class="status-text" id="status-text">
+
+                </div>
+            </div>
+
+
+        </div>
+        </div>
+    </div>
+
+    <!-- Time Signature Modal -->
+    <div class="time-signature-modal" id="time-signature-modal">
+        <div class="time-signature-content">
+            <div class="time-signature-header">
+                <div>Time Signature</div>
+                <button class="time-signature-close" id="time-signature-close">✕</button>
+            </div>
+            <div class="time-signature-body">
+                <div class="time-signature-option" data-signature="4/4">
+                    <div class="time-signature-display">4/4</div>
+                    <div class="time-signature-description">Common Time (8 beats per bar)</div>
+                </div>
+                <div class="time-signature-option" data-signature="3/4">
+                    <div class="time-signature-display">3/4</div>
+                    <div class="time-signature-description">Waltz Time (6 beats per bar)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save/Load Modal (centered) -->
+    <div class="song-modal" id="song-modal">
+        <div class="song-content">
+            <div class="song-header">
+                <div>Save / Load</div>
+                <button class="song-btn" id="song-close">Close</button>
+            </div>
+            <div class="song-tabs">
+                <button class="song-tab active" data-tab="save">Save</button>
+                <button class="song-tab" data-tab="load">Load</button>
+                <button class="song-tab" data-tab="json">Import / Export</button>
+                <button class="song-tab" data-tab="midi">MIDI</button>
+            </div>
+            <div class="song-body">
+                <div class="song-panel" id="tab-save">
+                    <div class="song-row">
+                        <input class="song-input" id="song-name" placeholder="Song name"/>
+                        <button class="song-btn" id="song-save">Save</button>
+                    </div>
+                </div>
+                <div class="song-panel" id="tab-load" style="display:none;">
+                    <div class="song-list" id="song-list"></div>
+                </div>
+                <div class="song-panel" id="tab-json" style="display:none;">
+                    <div class="song-row">
+                        <input type="file" id="song-import" accept=".json,.md,text/markdown,application/json" style="display:none;"/>
+                        <button class="song-btn" id="song-import-btn">IMPORT SONG</button>
+                        <button class="song-btn" id="song-export-btn">EXPORT CURRENT SONG</button>
+                    </div>
+                    <textarea class="song-input" id="song-json-preview" style="height:220px; display:none;"></textarea>
+                </div>
+                <div class="song-panel" id="tab-midi" style="display:none;">
+                    <div class="song-checks">
+                        <label><input type="checkbox" class="seq-check" value="0" checked/> Seq 1</label>
+                        <label><input type="checkbox" class="seq-check" value="1"/> Seq 2</label>
+                        <label><input type="checkbox" class="seq-check" value="2"/> Seq 3</label>
+                        <label><input type="checkbox" class="seq-check" value="3"/> Seq 4</label>
+                        <label><input type="checkbox" class="seq-check" value="4"/> Seq 5</label>
+                        <label><input type="checkbox" class="seq-check" value="5"/> Seq 6</label>
+                        <label><input type="checkbox" class="seq-check" value="6"/> Seq 7</label>
+                        <label><input type="checkbox" class="seq-check" value="7"/> Seq 8</label>
+                    </div>
+                    <button class="song-btn" id="song-export-midi">Export Selected MIDI</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal removed -->
+    <script src="js/state.js"></script>
+    <script src="js/music-engine.js"></script>
+    <script src="js/audio-engine.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/sequencer.js"></script>
+    <script src="js/midi.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
