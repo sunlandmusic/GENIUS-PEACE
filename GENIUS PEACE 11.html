@@ -1957,11 +1957,11 @@ PLAY / STOP
             'LYDIAN_AUG_b2': { name: 'LYDIAN AUG #2', intervals: [0, 3, 4, 6, 8, 9, 11], system: 'harmonicMajor' },
             'LOCRIAN_bb7': { name: 'LOCRIAN bb7', intervals: [0, 1, 3, 4, 6, 8, 9], system: 'harmonicMajor' },
             'BLUES': { name: 'BLUES', intervals: [0, 3, 5, 6, 7, 10] },
-            'PENTATONIC_MAJOR': { name: 'PENTATONIC\nMAJOR', intervals: [0, 2, 4, 7, 9] },
-            'PENTATONIC_MINOR': { name: 'PENTATONIC\nMINOR', intervals: [0, 3, 5, 7, 10] },
-            'BEBOP_MAJOR': { name: 'BEBOP\nMAJOR', intervals: [0, 2, 4, 5, 7, 8, 9, 11] },
-            'BEBOP_MINOR': { name: 'BEBOP\nMINOR', intervals: [0, 2, 3, 4, 5, 7, 9, 10] },
-            'BEBOP_DOMINANT': { name: 'BEBOP\nDOMINANT', intervals: [0, 2, 4, 5, 7, 9, 10, 11] },
+            'PENTATONIC_MAJOR': { name: 'PENTATONIC\\nMAJOR', intervals: [0, 2, 4, 7, 9] },
+            'PENTATONIC_MINOR': { name: 'PENTATONIC\\nMINOR', intervals: [0, 3, 5, 7, 10] },
+            'BEBOP_MAJOR': { name: 'BEBOP\\nMAJOR', intervals: [0, 2, 4, 5, 7, 8, 9, 11] },
+            'BEBOP_MINOR': { name: 'BEBOP\\nMINOR', intervals: [0, 2, 3, 4, 5, 7, 9, 10] },
+            'BEBOP_DOMINANT': { name: 'BEBOP\\nDOMINANT', intervals: [0, 2, 4, 5, 7, 9, 10, 11] },
             'WHOLE_TONE': { name: 'WHOLE TONE', intervals: [0, 2, 4, 6, 8, 10] },
             'CHROMATIC': { name: 'CHROMATIC', intervals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
             'FREE': { name: 'FREE', intervals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] }
@@ -2054,8 +2054,8 @@ PLAY / STOP
         getModeDisplayName(mode) {
             const modeInfo = this.MODES[mode];
             if (!modeInfo) return mode;
-            if (mode === 'AEOLIAN') return 'AEOLIAN\n(NATURAL MINOR)';
-            if (mode === 'IONIAN') return 'IONIAN\n(NATURAL MAJOR)';
+            if (mode === 'AEOLIAN') return 'AEOLIAN\\n(NATURAL MINOR)';
+            if (mode === 'IONIAN') return 'IONIAN\\n(NATURAL MAJOR)';
             return modeInfo.name.replace('_', ' ');
         },
         getSystemForMode(mode) {
@@ -2133,28 +2133,15 @@ PLAY / STOP
             const voicesToDelete = [];
             this.activeVoices.forEach(voice => {
                 if (voice.source === 'seq') {
-                    if (!voice.stopped) {
-                        voice.stopped = true;
-                        voice.gain.gain.cancelScheduledValues(this.audioContext.currentTime);
-                        voice.gain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.08);
-                        voice.osc.stop(this.audioContext.currentTime + 0.08);
-                    }
-                    voicesToDelete.push(voice);
+                    this.stopVoice(voice);
                 }
             });
-            voicesToDelete.forEach(voice => this.activeVoices.delete(voice));
         }
 
         stopAllVoices() {
             this.activeVoices.forEach(voice => {
-                if (!voice.stopped) {
-                    voice.stopped = true;
-                    voice.gain.gain.cancelScheduledValues(this.audioContext.currentTime);
-                    voice.gain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.08);
-                    voice.osc.stop(this.audioContext.currentTime + 0.08);
-                }
+                this.stopVoice(voice);
             });
-            this.activeVoices.clear();
         }
     }
     APP.AudioEngine = AudioEngine;
@@ -2475,8 +2462,8 @@ PLAY / STOP
     function adjustModeButtonFontSize(modeValue) {
         const modeButton = document.getElementById('mode-value');
         if (!modeButton) return;
-        if (modeValue.includes('\n')) {
-            const lines = modeValue.split('\n');
+        if (modeValue.includes('\\n')) {
+            const lines = modeValue.split('\\n');
             const lineCount = lines.length;
             if (lineCount === 3) {
                 const bottomLine = lines[2];
@@ -2723,7 +2710,7 @@ PLAY / STOP
             case 'filter': APP.state.filterCutoff = Math.min(10, APP.state.filterCutoff + speed); break;
             case 'bass': {
                  if (APP.state.bassEditTarget) {
-                    const chordKey = APP.state.bassEditTarget.replace(/-(\d+)$/, `-${APP.getCurrentChordType(APP.state.bassEditTarget.split('-')[0], parseInt(APP.state.bassEditTarget.split('-')[1]))}-${APP.state.bassEditTarget.split('-')[1]}`);
+                    const chordKey = APP.state.bassEditTarget.replace(/-(\\d+)$/, `-${APP.getCurrentChordType(APP.state.bassEditTarget.split('-')[0], parseInt(APP.state.bassEditTarget.split('-')[1]))}-${APP.state.bassEditTarget.split('-')[1]}`);
                     APP.state.bassOffsets[chordKey] = (APP.state.bassOffsets[chordKey] || 0) + speed;
                     APP.state.bassOffset = APP.state.bassOffsets[chordKey];
                 }
@@ -2780,7 +2767,7 @@ PLAY / STOP
             case 'filter': APP.state.filterCutoff = Math.max(0, APP.state.filterCutoff - speed); break;
             case 'bass': {
                  if (APP.state.bassEditTarget) {
-                    const chordKey = APP.state.bassEditTarget.replace(/-(\d+)$/, `-${APP.getCurrentChordType(APP.state.bassEditTarget.split('-')[0], parseInt(APP.state.bassEditTarget.split('-')[1]))}-${APP.state.bassEditTarget.split('-')[1]}`);
+                    const chordKey = APP.state.bassEditTarget.replace(/-(\\d+)$/, `-${APP.getCurrentChordType(APP.state.bassEditTarget.split('-')[0], parseInt(APP.state.bassEditTarget.split('-')[1]))}-${APP.state.bassEditTarget.split('-')[1]}`);
                     APP.state.bassOffsets[chordKey] = (APP.state.bassOffsets[chordKey] || 0) - speed;
                     APP.state.bassOffset = APP.state.bassOffsets[chordKey];
                 }
@@ -2866,13 +2853,13 @@ PLAY / STOP
 
         function noteOn(note, velocity) {
             const noteName = Tone.Frequency(note, "midi").toNote();
-            const key = noteName.replace(/\d/,'');
+            const key = noteName.replace(/\\d/,'');
             handleSlotPress(key, APP.state.currentSlotLevel);
         }
 
         function noteOff(note) {
             const noteName = Tone.Frequency(note, "midi").toNote();
-            const key = noteName.replace(/\d/,'');
+            const key = noteName.replace(/\\d/,'');
             handleSlotRelease(key, APP.state.currentSlotLevel);
         }
     }
@@ -3120,6 +3107,6 @@ PLAY / STOP
     });
 
 })(window.APP);
-    </script>
+</script>
 </body>
 </html>
